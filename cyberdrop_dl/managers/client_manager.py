@@ -9,6 +9,7 @@ import aiohttp
 import certifi
 from aiohttp import ClientResponse, ContentTypeError
 from aiolimiter import AsyncLimiter
+from yarl import URL
 
 from cyberdrop_dl.clients.download_client import DownloadClient
 from cyberdrop_dl.clients.errors import DownloadFailure, DDOSGuardFailure, ScrapeFailure
@@ -77,6 +78,11 @@ class ClientManager:
         headers = response.headers
 
         if download:
+            if response.url in [URL("https://bnkr.b-cdn.net/maintenance-vid.mp4"),
+                                URL("https://bnkr.b-cdn.net/maintenance.mp4"),
+                                URL("https://c.bunkr-cache.se/maintenance-vid.mp4"),
+                                URL("https://c.bunkr-cache.se/maintenance.jpg"),]:
+                raise DownloadFailure(status="Bunkr Maintenance", message="Bunkr under maintenance")
             if headers.get('ETag') in ['"eb669b6362e031fa2b0f1215480c4e30"', '"a9e4cee098dc6f1e09ec124299f26b30"']:
                 raise DownloadFailure(status="Bunkr Maintenance", message="Bunkr under maintenance")
             if headers.get('ETag') == '"d835884373f4d6c8f24742ceabe74946"':
