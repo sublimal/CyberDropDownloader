@@ -54,17 +54,15 @@ class BunkrrCrawler(Crawler):
 
         async with self.request_limiter:
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
-        title = soup.select_one('h1[class="text-[24px] font-bold text-dark dark:text-white"]')
-        for elem in title.find_all("span"):
-            elem.decompose()
+        title = soup.select_one('h1')
 
         title = await self.create_title(title.get_text().strip(), scrape_item.url.parts[2], None)
         await scrape_item.add_to_parent_title(title)
 
-        card_listings = soup.select('div[class*="grid-images_box rounded-lg"]')
+        card_listings = soup.select('div[class*="theItem"]')
         for card_listing in card_listings:
-            file = card_listing.select_one('a[class*="grid-images_box-link"]')
-            date = await self.parse_datetime(card_listing.select_one('p[class*="date"]').text)
+            file = card_listing.select_one('a')
+            date = await self.parse_datetime(card_listing.select_one('span[class*="theDate"]').text.strip())
             link = file.get("href")
             if link.startswith("/"):
                 link = URL("https://" + scrape_item.url.host + link)
@@ -72,11 +70,11 @@ class BunkrrCrawler(Crawler):
             link = await self.get_stream_link(link)
 
             try:
-                filename = card_listing.select_one("div[class*=details]").select_one("p").text
+                filename = card_listing.select_one("p[class*=theName]").text
                 file_ext = "." + filename.split(".")[-1]
                 if file_ext.lower() not in FILE_FORMATS['Images'] and file_ext.lower() not in FILE_FORMATS['Videos']:
                     raise FileNotFoundError()
-                image_obj = file.select_one("img")
+                image_obj = card_listing.select_one("img")
                 src = image_obj.get("src")
                 src = src.replace("/thumbs/", "/")
                 src = URL(src, encoded=True)
@@ -104,7 +102,7 @@ class BunkrrCrawler(Crawler):
 
         async with self.request_limiter:
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
-        link_container = soup.select("a[class*=bg-blue-500]")[-1]
+        link_container = soup.select('a[class*=download]')[-1]
         link = URL(link_container.get('href'))
 
         try:
@@ -135,7 +133,7 @@ class BunkrrCrawler(Crawler):
 
         async with self.request_limiter:
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
-        link_container = soup.select('a[class*="text-white inline-flex"]')[-1]
+        link_container = soup.select('a[class*="download"]')[-1]
         link = URL(link_container.get('href'))
 
         try:
@@ -169,7 +167,7 @@ class BunkrrCrawler(Crawler):
 
     async def get_stream_link(self, url: URL) -> URL:
         """Gets the stream link for a given url"""
-        cdn_possibilities = r"^(?:(?:(?:media-files|cdn|c|pizza|cdn-burger|cdn-nugget|burger|taquito|pizza|fries|meatballs|milkshake|kebab)[0-9]{0,2})|(?:(?:big-taco-|cdn-pizza|cdn-meatballs|cdn-milkshake|i.kebab|i.fries|i-nugget|i-milkshake)[0-9]{0,2}(?:redir)?))\.bunkr?\.[a-z]{2,3}$"
+        cdn_possibilities = r"^(?:(?:(?:media-files|cdn|c|pizza|cdn-burger|cdn-nugget|burger|taquito|pizza|fries|meatballs|milkshake|kebab|wiener)[0-9]{0,2})|(?:(?:big-taco-|cdn-pizza|cdn-meatballs|cdn-milkshake|i.kebab|i.fries|i-nugget|i-milkshake)[0-9]{0,2}(?:redir)?))\.bunkr?\.[a-z]{2,3}$"
 
         if not re.match(cdn_possibilities, url.host):
             return url
