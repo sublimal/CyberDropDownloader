@@ -121,17 +121,13 @@ class BunkrrCrawler(Crawler):
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
         link_container = soup.select('a[class*="download"]')[-1]
         link = URL(link_container.get('href'))
+        title = soup.select_one('h1').text
+        filename, ext = await get_filename_and_ext(title)
 
-        try:
-            filename, ext = await get_filename_and_ext(link.name)
-        except NoExtensionFailure:
-            if "get" in link.host:
-                link = await self.reinforced_link(link)
-                if not link:
-                    return
-                filename, ext = await get_filename_and_ext(link.name)
-            else:
-                filename, ext = await get_filename_and_ext(scrape_item.url.name)
+        if "get" in link.host:
+            link = await self.reinforced_link(link)
+            if not link:
+                return
 
         await self.handle_file(link, scrape_item, filename, ext)
 
