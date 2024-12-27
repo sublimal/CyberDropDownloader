@@ -52,7 +52,7 @@ class KemonoCrawler(Crawler):
         """Scrapes a profile"""
         offset = 0
         service, user = await self.get_service_and_user(scrape_item)
-        user_str = await self.get_user_str_from_profile(scrape_item)
+        user_str = await self.get_user_str(service, user)
         api_call = self.api_url / service / "user" / user
         while True:
             async with self.request_limiter:
@@ -84,7 +84,7 @@ class KemonoCrawler(Crawler):
     async def post(self, scrape_item: ScrapeItem) -> None:
         """Scrapes a post"""
         service, user, post_id = await self.get_service_user_and_post(scrape_item)
-        user_str = await self.get_user_str_from_post(scrape_item)
+        user_str = await self.get_user_str(service, user)
         api_call = self.api_url / service / "user" / user / "post" / post_id
         async with self.request_limiter:
             post = await self.client.get_json(self.domain, api_call)
@@ -161,21 +161,13 @@ class KemonoCrawler(Crawler):
             date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f")
         return calendar.timegm(date.timetuple())
 
-    @error_handling_wrapper
-    async def get_user_str_from_post(self, scrape_item: ScrapeItem) -> str:
-        """Gets the user string from a scrape item"""
+    async def get_user_str(self, service: str, user: str) -> str:
+        """Gets the user string from profile"""
+        api_call = self.api_url / service / "user" / user / "profile"
         async with self.request_limiter:
-            soup = await self.client.get_BS4(self.domain, scrape_item.url)
-        user = soup.select_one("a[class=post__user-name]").text
-        return user
-
-    @error_handling_wrapper
-    async def get_user_str_from_profile(self, scrape_item: ScrapeItem) -> str:
-        """Gets the user string from a scrape item"""
-        async with self.request_limiter:
-            soup = await self.client.get_BS4(self.domain, scrape_item.url)
-        user = soup.select_one("span[itemprop=name]").text
-        return user
+            profile = await self.client.get_json(self.domain, api_call)
+        user_str = profile["name"]
+        return user_str
 
     async def get_service_and_user(self, scrape_item: ScrapeItem) -> Tuple[str, str]:
         """Gets the service and user from a scrape item"""
