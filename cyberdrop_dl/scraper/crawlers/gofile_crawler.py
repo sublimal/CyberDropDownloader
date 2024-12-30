@@ -90,8 +90,14 @@ class GoFileCrawler(Crawler):
                 continue
             duplicate_scrape_item = deepcopy(scrape_item)
             duplicate_scrape_item.possible_datetime = content["createTime"]
-            duplicate_scrape_item.part_of_album = True
-            await duplicate_scrape_item.add_to_parent_title(title)
+
+            if JSON_Resp['childrenCount'] == 1 and (JSON_Resp.get('isRoot', False) or re.match(r'[a-zA-Z0-9]{6,7}', title)):
+                # All gofile links are albums with a name
+                # If scrape item is single file with default folder name don't put in album
+                pass
+            else:
+                duplicate_scrape_item.part_of_album = True
+                await duplicate_scrape_item.add_to_parent_title(title)
             await self.handle_file(link, duplicate_scrape_item, filename, ext)
 
     """~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"""
