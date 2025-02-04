@@ -38,10 +38,8 @@ class BunkrrCrawler(Crawler):
 
         if "a" in scrape_item.url.parts:
             await self.album(scrape_item)
-        elif "v" in scrape_item.url.parts:
-            await self.video(scrape_item)
         else:
-            await self.other(scrape_item)
+            await self.file(scrape_item)
 
         await self.scraping_progress.remove_task(task_id)
 
@@ -93,34 +91,22 @@ class BunkrrCrawler(Crawler):
                 self.manager.task_group.create_task(self.run(ScrapeItem(link, scrape_item.parent_title, True, album_id, date)))
 
     @error_handling_wrapper
-    async def video(self, scrape_item: ScrapeItem) -> None:
-        """Scrapes a video"""
-        scrape_item.url = self.primary_base_domain.with_path(scrape_item.url.path)
-        if await self.check_complete_from_referer(scrape_item):
-            return
-
-        async with self.request_limiter:
-            soup = await self.client.get_BS4(self.domain, scrape_item.url)
-
-        link_container = soup.select_one("source")
-        link = URL(link_container.get('src'))
-        title = soup.select_one('h1').text
-        filename, ext = await get_filename_and_ext(title)
-
-        await self.handle_file(link, scrape_item, filename, ext)
-
-    @error_handling_wrapper
-    async def other(self, scrape_item: ScrapeItem) -> None:
+    async def file(self, scrape_item: ScrapeItem) -> None:
         """Scrapes an image/other file"""
         scrape_item.url = self.primary_base_domain.with_path(scrape_item.url.path)
-        
         if await self.check_complete_from_referer(scrape_item):
             return
 
         async with self.request_limiter:
             soup = await self.client.get_BS4(self.domain, scrape_item.url)
-        link_container = soup.select('a[class*="download"]')[-1]
-        link = URL(link_container.get('href'))
+
+        try:
+            link_container = soup.select_one("source")
+            link = URL(link_container.get('src'))
+        except AttributeError:
+            link_container = soup.select('a[class*="download"]')[-1]
+            link = URL(link_container.get('href'))
+
         title = soup.select_one('h1').text
         filename, ext = await get_filename_and_ext(title)
 
