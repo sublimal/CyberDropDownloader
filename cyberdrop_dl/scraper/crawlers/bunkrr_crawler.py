@@ -70,7 +70,7 @@ class BunkrrCrawler(Crawler):
             try:
                 filename = card_listing.select_one("p[class*=theName]").text
                 file_ext = "." + filename.split(".")[-1]
-                if file_ext.lower() not in FILE_FORMATS['Images'] and file_ext.lower() not in FILE_FORMATS['Videos']:
+                if file_ext.lower() not in FILE_FORMATS['Images']:
                     raise FileNotFoundError()
                 image_obj = card_listing.select_one("img")
                 src = image_obj.get("src")
